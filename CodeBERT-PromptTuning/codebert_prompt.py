@@ -27,9 +27,6 @@ def read_answers(filename):
         for line in f:
             line = line.strip()
             js = json.loads(line)
-            # tgt_txt = "true" if str(js['label']) == "1" else "false"
-            # example = InputExample(guid=js['idx'], text_a=js['contract'], label=js['label'], tgt_text=tgt_txt)
-
             example = InputExample(guid=int(js['idx']), text_a=js['contract'], label=int(js['label']))
             answers.append(example)
 
@@ -95,20 +92,13 @@ def evaluate_model(model, data_loader, device, is_testing=False, args=None):
     recall = recall_score(truth, predict)
     f1 = f1_score(truth, predict)
 
-    # detect_result = f"Vulnerability Type: {vul_type} | Number: {len(truth)} | Accuracy: {accuracy:.2%} | Precision: {precision:.2%} | Recall: {recall:.2%} | F1: {f1:.2%}"
-    detect_result = {"vul_type": vul_type, "number": len(truth), "accuracy": "{:.2%}".format(accuracy), \
+    detect_result = {"vul_type": vul_type, "number": len(truth), "accuracy": "{:.2%}".format(accuracy),
                      "precision": "{:.2%}".format(precision), "recall": "{:.2%}".format(recall),
-                     "f1": "{:.2%}".format(f1), \
+                     "f1": "{:.2%}".format(f1),
                      "soft_prompt": args.soft_prompt, "expert_knowledge": args.expert_knowledge}
     print(detect_result)
 
     if is_testing:
-        for example, pred in zip(test_examples, preds):
-            if example['idx'] == 79:
-                print("contract_id:", example['idx'])
-                print("label:", example['label'])
-                print("prediction:", int(pred))
-
         with open(os.path.join(args.output_dir, "predictions.jsonl"), "a") as f:
             f.write(json.dumps(detect_result))
             f.write('\n')
@@ -225,7 +215,6 @@ def main(vul_type, vul_description):
     lr = args.learning_rate
     adam_epsilon = args.adam_epsilon
     max_grad_norm = args.max_grad_norm
-    output_model_file = ""
 
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [{
@@ -248,7 +237,6 @@ def main(vul_type, vul_description):
     not_acc_inc_cnt = 0
     early_stop = False
 
-    # codet5-base.resize_token_embeddings(len(tokenizer))
     model.zero_grad()
     for idx in range(0, num_train_epochs):
         logger.info("***** CUDA.empty_cache() *****")
@@ -281,12 +269,12 @@ def main(vul_type, vul_description):
                 global_step += 1
 
             # <====================validing part====================>
-            if (args.do_eval) and ((batch_idx + 1) % save_steps == 0):
+            if args.do_eval and ((batch_idx + 1) % save_steps == 0):
                 logger.info("\n----- Running Validating -----")
                 logger.info("***** CUDA.empty_cache() *****")
                 torch.cuda.empty_cache()
                 valid_loss, valid_accuracy = evaluate_model(model, valid_data_loader, device, False, args)
-                logger.info(f"Validation Loss: {valid_loss:.4f}, Validation Accuracy: {valid_accuracy:.4f}")
+                logger.info("Validation Loss: {:.4f}, Validation Accuracy: {:.4f}".format(valid_loss, valid_accuracy))
 
                 if valid_accuracy > best_acc:
                     not_acc_inc_cnt = 0
@@ -318,19 +306,18 @@ def main(vul_type, vul_description):
                 torch.cuda.empty_cache()
                 model.to(device)
                 test_loss, test_accuracy = evaluate_model(model, test_data_loader, device, False, args)
-                logger.info(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+                logger.info("Test Loss: {:.4f}, Test Accuracy: {:.4f}".format(test_loss, test_accuracy))
 
         if early_stop:
             break
 
-        logger.info(f"Training epoch {idx + 1}, num_steps {global_step},  total_loss: {total_loss:.4f}")
+        logger.info("Training epoch {}, num_steps {}, total_loss: {:.4f}".format(idx + 1, global_step, total_loss))
 
     # <====================testing part====================>
     logger.info("***** Running Testing *****")
-    # model.load_state_dict(torch.load(output_model_file))
     model.to(device)
     test_loss, test_accuracy = evaluate_model(model, test_data_loader, device, True, args)
-    logger.info(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+    logger.info("Test Loss: {:.4f}, Test Accuracy: {:.4f}".format(test_loss, test_accuracy))
 
 
 if __name__ == '__main__':

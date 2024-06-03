@@ -4,7 +4,7 @@ for i in $( seq 1 3 )
 do
   # split dataset
   cd ..
-  python data_augmentation_description.py
+  python generate_dataset.py
 
   # run model
   cd CodeBERT-PromptTuning

@@ -3,6 +3,7 @@ import json
 import random
 import re
 
+
 # keywords of solidity; immutable set
 keywords = frozenset(
     {'bool', 'break', 'case', 'catch', 'const', 'continue', 'default', 'do', 'double', 'struct',
@@ -21,6 +22,7 @@ main_set = frozenset({'function', 'constructor', 'modifier', 'contract'})
 
 # arguments in main function; immutable set
 main_args = frozenset({'argc', 'argv'})
+
 
 # input is a list of string lines
 def clean_fragment(fragment):
@@ -96,7 +98,7 @@ def clean_fragment(fragment):
                         var_symbols[var_name] = 'VAR' + str(random.randint(1, 50))
                     # ensure that only variable name gets replaced (no function name with same
                     # identifier; uses negative lookforward
-                    ascii_line = re.sub(r'\b(' + var_name + r')\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()', \
+                    ascii_line = re.sub(r'\b(' + var_name + r')\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()',
                                         var_symbols[var_name], ascii_line)
 
             cleaned_fragment.append(ascii_line)
@@ -109,7 +111,6 @@ def read_source_code_files(folder_path, file_extensions):
 
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            # 检查文件是否以指定的文件扩展名结尾，以确定是否是源码文件
             if any(file.lower().endswith(ext) for ext in file_extensions):
                 file_path = os.path.join(root, file)
                 source_code_files.append(file[0:-4])
@@ -120,28 +121,24 @@ def read_source_code_files(folder_path, file_extensions):
 
 def read_contract_code(code_file_path):
     with open(code_file_path, 'r', encoding='utf-8') as f:
-        # 源代码字符串
         contract = f.read()
 
-    # 使用 splitlines() 方法将输入文本分割成行的列表
     contract_lines = contract.splitlines()
-    # 使用列表推导式生成去除空行后的文本
     contract_remove_lines = '\n'.join(line for line in contract_lines if line.strip() != "")
 
     return contract_remove_lines
 
 
-def split_dataset(is_few_shot=False, shot_num=32):
+def split_dataset():
     import json
 
-    # 数据增强JSONL文件
     # jsonl_file = "datasets/Dataset_2_Contract_And_Description_Gemini.jsonl"
     jsonl_file = "datasets/Dataset_2_Contract_And_Description_GPT-3.5.jsonl"
 
     with open(jsonl_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
 
-    # 漏洞种类
+    # vulnerability type
     vulnerability_type_list = ["reentrancy", "timestamp", "integeroverflow", "delegatecall"]
     vul_type_dict = {}
     for vul_type in vulnerability_type_list:
@@ -153,38 +150,19 @@ def split_dataset(is_few_shot=False, shot_num=32):
         vul_type_dict[vul_type].append(line)
 
     for vul_type in vulnerability_type_list:
-        # 随机打乱数据
+        # random shuffle
         lines = vul_type_dict[vul_type]
         random.shuffle(lines)
 
-        # 设置划分比例
-        if is_few_shot:
-            # 小样本场景数据集
-            total_samples = len(lines)
-            train_samples = shot_num
-            valid_samples = int(total_samples * 0.2)
+        train_ratio = 0.8
+        test_ratio = 0.2
 
-            # 划分数据集
-            train_data = lines[:train_samples]
-            valid_data = lines[train_samples:(train_samples + valid_samples) + 1]
-            test_data = lines[int(total_samples * 0.8):]
+        total_samples = len(lines)
+        train_samples = int(total_samples * train_ratio)
+        test_samples = total_samples - train_samples
 
-        else:
-            # 正常数据集
-            train_ratio = 0.8  # 训练集占比
-            # valid_ratio = 0.2  # 验证集占比
-            test_ratio = 0.2  # 测试集占比
-
-            # 计算划分的样本数量
-            total_samples = len(lines)
-            train_samples = int(total_samples * train_ratio)
-            # valid_samples = int(total_samples * valid_ratio)
-            test_samples = total_samples - train_samples
-
-            # 划分数据集
-            train_data = lines[:train_samples]
-            # valid_data = lines[train_samples:(train_samples + valid_samples)]
-            test_data = lines[train_samples:]
+        train_data = lines[:train_samples]
+        test_data = lines[train_samples:]
 
         idx = 1
         train_data_aug = []
@@ -199,27 +177,13 @@ def split_dataset(is_few_shot=False, shot_num=32):
             if "ERR" in description:
                 continue
 
-            # data augmentation for code (10 times)
-            # for aug in range(10):
-            #     code_aug = '\n'.join(clean_fragment(code.split('\n')))
-            #     code_aug = "{}\n[Description]{}".format(code_aug, description)
-            #     json_data_aug = {"contract": code_aug,
-            #                      "contract_name": name,
-            #                 "vulnerability_type": vul_type, 
-            #                 "label": label, 
-            #                 "idx": idx}
-            #     idx += 1
-            #     train_data_aug.append(json.dumps(json_data_aug))
-            #     train_data_aug.append('\n')
-
-            # 训练集只加代码描述
             code_aug = '\n'.join(clean_fragment(code.split('\n')))
             code_aug = "[Description]{}\n[Smart Contract]{}".format(description, code_aug)
             json_data_aug = {"contract": code_aug,
-                                "contract_name": name,
-                        "vulnerability_type": vul_type, 
-                        "label": label, 
-                        "idx": idx}
+                             "contract_name": name,
+                             "vulnerability_type": vul_type,
+                             "label": label,
+                             "idx": idx}
             idx += 1
             train_data_aug.append(json.dumps(json_data_aug))
             train_data_aug.append('\n')
@@ -229,41 +193,32 @@ def split_dataset(is_few_shot=False, shot_num=32):
             json_data = json.loads(test_data[i])
             code = json_data["contract"]
             description = json_data["description"]
-            name = json_data["contract_name"]
             label = json_data["label"]
             # idx = json_data["idx"]
 
             code = "[Description]{}\n[Smart Contract]{}".format(description, code)
-            json_data = {"contract": code, 
-                        "vulnerability_type": vul_type, 
-                        "label": label, 
-                        "idx": idx}
+            json_data = {"contract": code,
+                         "vulnerability_type": vul_type,
+                         "label": label,
+                         "idx": idx}
             idx += 1
             test_data_aug.append(json.dumps(json_data))
             test_data_aug.append('\n')
-            
 
-
-        # 定义输出文件名
-        output_dir = "datasets/{}".format(vul_type)  # 输出文件夹名称
+        output_dir = "datasets/{}".format(vul_type)
         os.makedirs(output_dir, exist_ok=True)
 
         train_file = os.path.join(output_dir, "train.jsonl")
-        # valid_file = os.path.join(output_dir, "valid.jsonl")
         test_file = os.path.join(output_dir, "test.jsonl")
 
-        # 写入划分后的数据到相应文件
         with open(train_file, "w", encoding="utf-8") as file:
             file.writelines(train_data_aug)
-
-        # with open(valid_file, "w", encoding="utf-8") as file:
-        #     file.writelines(valid_data)
 
         with open(test_file, "w", encoding="utf-8") as file:
             file.writelines(test_data_aug)
 
-        print("{}数据集已划分并保存至{}。".format(vul_type, output_dir))
+        print("{}Dataset is saved to {}.".format(vul_type, output_dir))
 
 
 if __name__ == '__main__':
-    split_dataset(is_few_shot=False, shot_num=32)
+    split_dataset()
