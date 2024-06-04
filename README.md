@@ -1,5 +1,5 @@
 # CodeSpeak
-Online repository of the ASE 2024 paper titled "CodeSpeak: Advancing Smart Contract Vulnerability Detection via LLM-Generated and Human Expert Knowledge".
+Online repository of the paper submitted to ASE 2024 titled "CodeSpeak: Advancing Smart Contract Vulnerability Detection via LLM-Generated and Human Expert Knowledge".
 
 # Dataset
 
