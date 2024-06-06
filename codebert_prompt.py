@@ -127,7 +127,7 @@ def main(vul_type, vul_description):
     classes = ['negative', 'positive']
 
     from openprompt.plms import load_plm
-    plm, tokenizer, model_config, WrapperClass = load_plm("roberta", "../models/codebert-base")
+    plm, tokenizer, model_config, WrapperClass = load_plm("roberta", "./models/codebert-base")
 
     # <====================USE DIFFERENT TEMPLATE====================>
     from openprompt.prompts import ManualTemplate, SoftTemplate, MixedTemplate

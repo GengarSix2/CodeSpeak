@@ -21,7 +21,7 @@ def add_args(parser):
                         help="Path to pre-trained model: e.g. roberta-base")
     parser.add_argument("--output_dir", default="saved-data", type=str, required=True,
                         help="The output directory where the model predictions and checkpoints will be written.")
-    parser.add_argument("--output_model_dir", default="../models/codebert_pt", type=str, required=True,
+    parser.add_argument("--output_model_dir", default="./models/codebert_pt", type=str, required=True,
                         help="The output directory where the model predictions and checkpoints will be written.")
     parser.add_argument("--load_model_path", default=None, type=str,
                         help="Path to trained model: Should contain the .bin files")
