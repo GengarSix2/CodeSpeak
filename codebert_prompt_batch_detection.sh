@@ -16,8 +16,8 @@ do
   --model_name_or_path ./models/codebert-base \
   --config_name ./models/codebert-base \
   --tokenizer_name ./models/codebert-base \
-  --output_dir ./saved-data/codebert-prompt \
-  --output_model_dir ./saved-data/codebert-prompt \
+  --output_dir ./saved-models/codebert-prompt \
+  --output_model_dir ./saved-models/codebert-prompt \
   --train_filename ./datasets \
   --valid_filename ./datasets \
   --test_filename ./datasets \

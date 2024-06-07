@@ -25,7 +25,7 @@ main_args = frozenset({'argc', 'argv'})
 
 
 # input is a list of string lines
-def clean_fragment(fragment):
+def code_augmentation(fragment):
     # dictionary; map function name to symbol name + number
     fun_symbols = {}
     # dictionary; map variable name to symbol name + number
@@ -43,7 +43,7 @@ def clean_fragment(fragment):
     rx_var = re.compile(r'\b([_A-Za-z]\w*)\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()')
 
     # final cleaned gadget output to return to interface
-    cleaned_fragment = []
+    aug_fragment = []
 
     for line in fragment:
         # process if not the header line and not a multi-line commented line
@@ -59,11 +59,6 @@ def clean_fragment(fragment):
             user_fun = rx_fun.findall(ascii_line)
             user_var = rx_var.findall(ascii_line)
 
-            # Could easily make a "clean fragment" type class to prevent duplicate functionality
-            # of creating/comparing symbol names for functions and variables in much the same way.
-            # The comparison frozenset, symbol dictionaries, and counters would be class scope.
-            # So would only need to pass a string list and a string literal for symbol names to
-            # another function.
             for fun_name in user_fun:
                 if len({fun_name}.difference(main_set)) != 0 and len({fun_name}.difference(keywords)) != 0:
                     # DEBUG
@@ -101,9 +96,10 @@ def clean_fragment(fragment):
                     ascii_line = re.sub(r'\b(' + var_name + r')\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()',
                                         var_symbols[var_name], ascii_line)
 
-            cleaned_fragment.append(ascii_line)
+            aug_fragment.append(ascii_line)
+
     # return the list of cleaned lines
-    return cleaned_fragment
+    return aug_fragment
 
 
 def read_source_code_files(folder_path, file_extensions):
@@ -132,8 +128,8 @@ def read_contract_code(code_file_path):
 def split_dataset():
     import json
 
-    # jsonl_file = "datasets/Dataset_2_Contract_And_Description_Gemini.jsonl"
-    jsonl_file = "datasets/Dataset_2_Contract_And_Description_GPT-3.5.jsonl"
+    # jsonl_file = "datasets/Contract_And_Description_Gemini.jsonl"
+    jsonl_file = "datasets/Contract_And_Description_GPT-3.5.jsonl"
 
     with open(jsonl_file, "r", encoding="utf-8") as file:
         lines = file.readlines()
@@ -177,7 +173,7 @@ def split_dataset():
             if "ERR" in description:
                 continue
 
-            code_aug = '\n'.join(clean_fragment(code.split('\n')))
+            code_aug = '\n'.join(code_augmentation(code.split('\n')))
             code_aug = "[Description]{}\n[Smart Contract]{}".format(description, code_aug)
             json_data_aug = {"contract": code_aug,
                              "contract_name": name,
@@ -194,7 +190,6 @@ def split_dataset():
             code = json_data["contract"]
             description = json_data["description"]
             label = json_data["label"]
-            # idx = json_data["idx"]
 
             code = "[Description]{}\n[Smart Contract]{}".format(description, code)
             json_data = {"contract": code,
